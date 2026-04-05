@@ -100,6 +100,24 @@
     /* Schema */
     #schema-content { font-family: "SFMono-Regular", Consolas, monospace; font-size: .82rem; white-space: pre-wrap; word-break: break-word; line-height: 1.7; background: #0f172a; color: #e2e8f0; padding: 1rem; border-radius: 8px; }
 
+    /* note用タブ */
+    .note-instructions { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 1rem 1.2rem; margin-bottom: 1.25rem; font-size: .82rem; }
+    .note-instructions strong { color: #c2410c; }
+    .note-instructions ol { margin: .5rem 0 0 1.2rem; }
+    .note-instructions li { margin-bottom: .25rem; color: var(--text-muted); }
+    .note-free { border: 2px solid var(--success); border-radius: 8px; padding: 1rem; margin-bottom: .5rem; }
+    .note-free-label { font-size: .75rem; font-weight: 700; color: var(--success); margin-bottom: .75rem; display: flex; align-items: center; gap: .3rem; }
+    .note-paid { border: 2px solid var(--warning); border-radius: 8px; padding: 1rem; position: relative; }
+    .note-paid-label { font-size: .75rem; font-weight: 700; color: var(--warning); margin-bottom: .75rem; display: flex; align-items: center; gap: .3rem; }
+    .note-divider { text-align: center; padding: .75rem 0; font-size: .85rem; font-weight: 700; color: var(--warning); letter-spacing: .05em; background: #fffbeb; border-radius: 6px; margin: .5rem 0; border: 1px dashed var(--warning); }
+    .note-section { line-height: 1.75; font-size: .9rem; }
+    .note-section h1 { font-size: 1.4rem; margin: 0 0 .75rem; }
+    .note-section h2 { font-size: 1.1rem; margin: 1.5rem 0 .5rem; padding-bottom: .3rem; border-bottom: 2px solid var(--border); }
+    .note-section h3 { font-size: .95rem; margin: 1rem 0 .4rem; font-weight: 700; }
+    .note-section p  { margin-bottom: .75rem; }
+    .note-section ul, .note-section ol { margin: .5rem 0 .75rem 1.5rem; }
+    .note-section li { margin-bottom: .25rem; }
+
     /* Meta box */
     .meta-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; font-size: .82rem; }
     .meta-box .meta-title { font-weight: 700; color: #0369a1; margin-bottom: .5rem; display: flex; align-items: center; gap: .4rem; }
@@ -180,12 +198,14 @@
     <div class="tabs">
       <div class="tab active" id="tab-preview"  onclick="switchTab('preview')">プレビュー</div>
       <div class="tab"        id="tab-markdown" onclick="switchTab('markdown')">Markdown</div>
+      <div class="tab"        id="tab-note"     onclick="switchTab('note')">note用</div>
       <div class="tab"        id="tab-schema"   onclick="switchTab('schema')">Schema.org</div>
     </div>
     <div class="toolbar">
       <span class="char-count" id="char-count">0 文字</span>
       <div class="toolbar-right">
         <button class="btn-sm" id="btn-copy-md" onclick="copyContent('markdown')">📋 Markdownコピー</button>
+        <button class="btn-sm" id="btn-copy-note" onclick="copyContent('note')">📋 noteコピー</button>
         <button class="btn-sm" id="btn-copy-schema" onclick="copyContent('schema')">📋 Schemaコピー</button>
       </div>
     </div>
@@ -205,6 +225,7 @@
       <div id="meta-display" style="display:none"></div>
       <div id="preview-content"  style="display:none"></div>
       <div id="markdown-content" style="display:none"></div>
+      <div id="note-content"     style="display:none"></div>
       <div id="schema-content"   style="display:none"></div>
     </div>
   </div>
@@ -222,7 +243,7 @@
 
   function switchTab(tab) {
     currentTab = tab;
-    ['preview','markdown','schema'].forEach(t => {
+    ['preview','markdown','note','schema'].forEach(t => {
       document.getElementById('tab-' + t).classList.toggle('active', t === tab);
       const el = document.getElementById(t + '-content');
       if (el) el.style.display = t === tab ? 'block' : 'none';
@@ -250,7 +271,61 @@
 
   function stripAnnotations(text) {
     return text.replace(/<!--\s*META[\s\S]*?-->\s*/g, '')
-               .replace(/<!--\s*SCHEMA[\s\S]*?-->\s*/g, '').trim();
+               .replace(/<!--\s*SCHEMA[\s\S]*?-->\s*/g, '')
+               .replace(/<!--\s*NOTE_PAID_START\s*-->/g, '')
+               .trim();
+  }
+
+  function buildNoteView(text) {
+    const body = text.replace(/<!--\s*META[\s\S]*?-->\s*/g, '')
+                     .replace(/<!--\s*SCHEMA[\s\S]*?-->\s*/g, '').trim();
+    const marker = '<!-- NOTE_PAID_START -->';
+    const idx = body.indexOf(marker);
+    const noteEl = document.getElementById('note-content');
+
+    if (idx === -1) {
+      // マーカーなし
+      noteEl.innerHTML = `
+        <div class="note-instructions">
+          <strong>⚠️ 有料区切りが見つかりませんでした。</strong><br>
+          再生成するか、Markdownタブで手動で区切り位置を決めてください。
+        </div>
+        <div class="note-section">${marked.parse(body)}</div>`;
+      return;
+    }
+
+    const freePart = body.slice(0, idx).trim();
+    const paidPart = body.slice(idx + marker.length).trim();
+    const freeChars = freePart.replace(/\s/g,'').length;
+    const paidChars = paidPart.replace(/\s/g,'').length;
+
+    noteEl.innerHTML = `
+      <div class="note-instructions">
+        <strong>📌 noteへの貼り付け手順</strong>
+        <ol>
+          <li>下の「noteコピー」ボタンを押す</li>
+          <li>noteの記事エディタを開いてペースト</li>
+          <li>「━━ ここから有料 ━━」の行にカーソルを合わせる</li>
+          <li>noteツールバーの「有料エリア設定」をクリック</li>
+          <li>価格を設定して公開</li>
+        </ol>
+      </div>
+      <div class="note-free">
+        <div class="note-free-label">🆓 無料部分（${freeChars.toLocaleString()}文字）</div>
+        <div class="note-section">${marked.parse(freePart)}</div>
+      </div>
+      <div class="note-divider">━━━━━━ ここから有料コンテンツ ━━━━━━</div>
+      <div class="note-paid">
+        <div class="note-paid-label">💰 有料部分（${paidChars.toLocaleString()}文字）</div>
+        <div class="note-section">${marked.parse(paidPart)}</div>
+      </div>`;
+  }
+
+  function buildNoteCopyText(text) {
+    // noteに貼るプレーンテキスト（マーカーを人間が読める区切りに置換）
+    const body = text.replace(/<!--\s*META[\s\S]*?-->\s*/g, '')
+                     .replace(/<!--\s*SCHEMA[\s\S]*?-->\s*/g, '').trim();
+    return body.replace('<!-- NOTE_PAID_START -->', '\n\n━━━━━━ ここから有料コンテンツ ━━━━━━\n\n');
   }
 
   function renderMeta(meta) {
@@ -272,6 +347,7 @@
     document.getElementById('meta-display').style.display = meta ? 'block' : 'none';
     document.getElementById('preview-content').innerHTML = marked.parse(body);
     document.getElementById('markdown-content').textContent = body;
+    buildNoteView(fullText);
     if (extractedSchema) {
       try {
         document.getElementById('schema-content').textContent = JSON.stringify(JSON.parse(extractedSchema), null, 2);
@@ -299,6 +375,7 @@
     document.getElementById('competitors').innerHTML = '';
     document.getElementById('preview-content').innerHTML = '';
     document.getElementById('markdown-content').textContent = '';
+    document.getElementById('note-content').innerHTML = '';
     document.getElementById('schema-content').textContent = '';
     document.getElementById('char-count').textContent = '生成中...';
 
@@ -310,7 +387,7 @@
     setStep('step-done', '');
 
     // タブ表示
-    ['preview','markdown','schema'].forEach(t => {
+    ['preview','markdown','note','schema'].forEach(t => {
       document.getElementById(t + '-content').style.display = t === currentTab ? 'block' : 'none';
     });
 
@@ -384,7 +461,10 @@
 
   async function copyContent(type) {
     const body = stripAnnotations(fullText);
-    const content = type === 'schema' ? extractedSchema : body;
+    let content;
+    if (type === 'schema') content = extractedSchema;
+    else if (type === 'note') content = buildNoteCopyText(fullText);
+    else content = body;
     if (!content) return;
     await navigator.clipboard.writeText(content);
     const btn = document.getElementById('btn-copy-' + type);
