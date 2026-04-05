@@ -46,28 +46,26 @@ def search_competitors(keyword: str, num: int = 5) -> list[dict]:
     return results
 
 
-def search_images(query: str, count: int = 1, wide: bool = True) -> list[str]:
-    """DuckDuckGoでCC画像を検索してURLリストを返す"""
-    urls = []
+def search_images(query: str, count: int = 1) -> list[dict]:
+    """DuckDuckGoで画像を検索してサムネイル情報を返す"""
+    results = []
     try:
         with DDGS() as ddgs:
-            results = ddgs.images(
-                query,
-                license_image="shareCommercially",
-                max_results=count * 5,
-            )
-            for r in results:
-                w = r.get("width", 0)
-                h = r.get("height", 1)
-                if wide and w > h:
-                    urls.append(r["image"])
-                elif not wide:
-                    urls.append(r["image"])
-                if len(urls) >= count:
+            for r in ddgs.images(query, max_results=count * 3):
+                thumbnail = r.get("thumbnail", "")
+                image = r.get("image", "")
+                source = r.get("url", r.get("source", ""))
+                if thumbnail:
+                    results.append({
+                        "thumbnail": thumbnail,
+                        "image": image,
+                        "source": source,
+                    })
+                if len(results) >= count:
                     break
     except Exception:
         pass
-    return urls
+    return results
 
 
 def build_competitor_summary(competitors: list[dict]) -> str:
@@ -271,21 +269,32 @@ async def generate_images(req: ImageRequest):
         raise HTTPException(status_code=500, detail=f"クエリ生成に失敗しました: {resp.content[0].text[:200]}")
 
     # DuckDuckGoで画像検索（無料・APIキー不要）
-    header_urls = search_images(data["header_query"], count=1, wide=True)
+    header_results = search_images(data["header_query"], count=1)
     images = []
     for img in data.get("images", []):
-        urls = search_images(img["query"], count=1, wide=False)
-        images.append({
-            "section": img["section"],
-            "query": img["query"],
-            "url": urls[0] if urls else "",
-        })
+        results = search_images(img["query"], count=1)
+        if results:
+            r = results[0]
+            images.append({
+                "section": img["section"],
+                "query": img["query"],
+                "thumbnail": r["thumbnail"],
+                "image": r["image"],
+                "source": r["source"],
+            })
+
+    header = {}
+    if header_results:
+        r = header_results[0]
+        header = {
+            "thumbnail": r["thumbnail"],
+            "image": r["image"],
+            "source": r["source"],
+            "query": data["header_query"],
+        }
 
     return {
         "title": data.get("title", ""),
-        "header": {
-            "url": header_urls[0] if header_urls else "",
-            "query": data["header_query"],
-        },
-        "images": [img for img in images if img["url"]],
+        "header": header,
+        "images": images,
     }

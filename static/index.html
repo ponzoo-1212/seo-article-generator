@@ -528,30 +528,31 @@
       }
 
       // ヘッダー画像
-      if (data.header?.url) {
+      if (data.header?.thumbnail || data.header?.image) {
+        const thumb = data.header.thumbnail || data.header.image;
+        const full  = data.header.image || data.header.thumbnail;
         html += `<div class="img-section-title">🖼️ ヘッダー画像（noteカバー用）</div>
         <div class="img-card">
-          <img src="${data.header.url}" alt="header" loading="lazy" />
+          <img src="${thumb}" alt="header" loading="lazy" onerror="this.src='${full}'" />
           <div class="img-card-body">
-            <div class="img-card-meta"><strong>カバー画像</strong>noteの記事上部に設定してください</div>
-            <a class="btn-dl" href="${data.header.url}" target="_blank">🔗 画像を開く</a>
+            <div class="img-card-meta"><strong>カバー画像</strong>右クリック→保存 または 元ページから保存</div>
+            <a class="btn-dl" href="${full}" target="_blank">🔗 元画像を開く</a>
           </div>
         </div>`;
       }
 
-      // 記事内画像
       if (data.images?.length > 0) {
         html += `<div class="img-section-title">📸 記事内画像</div><div class="img-grid">`;
         data.images.forEach(img => {
-          if (img.url) {
-            html += `<div class="img-card">
-              <img src="${img.url}" alt="${img.section}" loading="lazy" />
-              <div class="img-card-body">
-                <div class="img-card-meta"><strong>${img.section}</strong>セクションの挿入に</div>
-                <a class="btn-dl" href="${img.url}" target="_blank">🔗 画像を開く</a>
-              </div>
-            </div>`;
-          }
+          const thumb = img.thumbnail || img.image;
+          const full  = img.image || img.thumbnail;
+          html += `<div class="img-card">
+            <img src="${thumb}" alt="${img.section}" loading="lazy" onerror="this.src='${full}'" />
+            <div class="img-card-body">
+              <div class="img-card-meta"><strong>${img.section}</strong></div>
+              <a class="btn-dl" href="${full}" target="_blank">🔗 元画像を開く</a>
+            </div>
+          </div>`;
         });
         html += `</div>`;
       }
