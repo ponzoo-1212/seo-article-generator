@@ -3,11 +3,13 @@ SEO Article Generator - Web App (Enhanced)
 競合分析 + E-E-A-T + FAQ + Schema.org 対応
 """
 
+import asyncio
 import json
 import os
 from pathlib import Path
 
 import anthropic
+import replicate
 from duckduckgo_search import DDGS
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -24,6 +26,34 @@ class GenerateRequest(BaseModel):
     keyword: str
     length: int = 2000
     tone: str = "professional"
+
+
+class ImageRequest(BaseModel):
+    keyword: str
+    article_body: str  # META/SCHEMA除去済みのMarkdown本文
+
+
+async def gen_image(prompt: str, aspect_ratio: str = "16:9") -> str:
+    """Replicate Flux-schnell で画像を1枚生成してURLを返す"""
+    loop = asyncio.get_event_loop()
+    try:
+        output = await loop.run_in_executor(
+            None,
+            lambda: replicate.run(
+                "black-forest-labs/flux-schnell",
+                input={
+                    "prompt": prompt,
+                    "aspect_ratio": aspect_ratio,
+                    "output_format": "webp",
+                    "num_outputs": 1,
+                    "num_inference_steps": 4,
+                    "go_fast": True,
+                },
+            ),
+        )
+        return str(list(output)[0])
+    except Exception:
+        return ""
 
 
 def search_competitors(keyword: str, num: int = 5) -> list[dict]:
@@ -197,3 +227,63 @@ keywords: （関連キーワード6〜10個・カンマ区切り）
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@app.post("/api/images")
+async def generate_images(req: ImageRequest):
+    replicate_token = os.environ.get("REPLICATE_API_TOKEN")
+    if not replicate_token:
+        raise HTTPException(status_code=400, detail="REPLICATE_API_TOKEN が未設定です")
+    os.environ["REPLICATE_API_TOKEN"] = replicate_token
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    client = anthropic.Anthropic(api_key=api_key)
+
+    # Claude（高速モデル）で画像プロンプトを生成
+    resp = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=1024,
+        messages=[
+            {
+                "role": "user",
+                "content": f"""以下のnote記事に最適な画像プロンプトをEnglishで生成してください。
+
+記事キーワード: {req.keyword}
+記事本文（先頭600文字）:
+{req.article_body[:600]}
+
+以下のJSON形式のみ出力してください（前置き不要）:
+{{
+  "title": "（この記事の最適なnoteタイトル・30文字以内・クリックしたくなる）",
+  "header": "（noteカバー画像用プロンプト・16:9・記事テーマを象徴するシーン）",
+  "images": [
+    {{"section": "（どのセクション向けか・日本語）", "prompt": "（画像プロンプト・英語）"}},
+    {{"section": "（どのセクション向けか・日本語）", "prompt": "（画像プロンプト・英語）"}},
+    {{"section": "（どのセクション向けか・日本語）", "prompt": "（画像プロンプト・英語）"}}
+  ]
+}}
+
+全プロンプトに必ず含めること: flat design illustration, clean, professional, japanese blog aesthetic, soft pastel colors, no text, no letters, no words""",
+            }
+        ],
+    )
+
+    try:
+        prompts = json.loads(resp.content[0].text)
+    except Exception:
+        raise HTTPException(status_code=500, detail="プロンプト生成に失敗しました")
+
+    # ヘッダー + 記事内画像を並列生成
+    header_task = gen_image(prompts["header"], "16:9")
+    article_tasks = [gen_image(img["prompt"], "4:3") for img in prompts.get("images", [])]
+    all_urls = await asyncio.gather(header_task, *article_tasks)
+
+    return {
+        "title": prompts.get("title", ""),
+        "header": {"url": all_urls[0], "prompt": prompts["header"]},
+        "images": [
+            {"url": all_urls[i + 1], "section": img["section"], "prompt": img["prompt"]}
+            for i, img in enumerate(prompts.get("images", []))
+            if i + 1 < len(all_urls)
+        ],
+    }

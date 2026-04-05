@@ -134,6 +134,26 @@
     .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 360px; color: var(--text-muted); gap: .75rem; }
     .placeholder .icon { font-size: 3rem; opacity: .4; }
 
+    /* 画像タブ */
+    .img-generating { text-align: center; padding: 3rem 1rem; color: var(--text-muted); }
+    .img-generating .spin { font-size: 2rem; display: inline-block; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .img-section-title { font-size: .8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin: 1.5rem 0 .75rem; }
+    .img-section-title:first-child { margin-top: 0; }
+    .suggested-title { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: .875rem 1rem; margin-bottom: 1.25rem; }
+    .suggested-title .st-label { font-size: .75rem; font-weight: 700; color: #0369a1; margin-bottom: .35rem; }
+    .suggested-title .st-value { font-size: 1rem; font-weight: 700; }
+    .img-card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 1rem; }
+    .img-card img { width: 100%; display: block; background: var(--bg); }
+    .img-card-body { padding: .75rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+    .img-card-meta { font-size: .8rem; color: var(--text-muted); flex: 1; }
+    .img-card-meta strong { color: var(--text); display: block; margin-bottom: .15rem; }
+    .img-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+    .btn-dl { padding: .35rem .8rem; border: 1px solid var(--primary); border-radius: 6px; color: var(--primary); background: none; font-size: .78rem; font-weight: 700; cursor: pointer; white-space: nowrap; text-decoration: none; }
+    .btn-dl:hover { background: #eef2ff; }
+    .no-replicate { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 1rem 1.25rem; font-size: .85rem; }
+    .no-replicate strong { color: #c2410c; }
+
     @media (max-width: 768px) { .container { grid-template-columns: 1fr; } .panel { position: static; } }
   </style>
 </head>
@@ -199,6 +219,7 @@
       <div class="tab active" id="tab-preview"  onclick="switchTab('preview')">プレビュー</div>
       <div class="tab"        id="tab-markdown" onclick="switchTab('markdown')">Markdown</div>
       <div class="tab"        id="tab-note"     onclick="switchTab('note')">note用</div>
+      <div class="tab"        id="tab-images"   onclick="switchTab('images')">画像</div>
       <div class="tab"        id="tab-schema"   onclick="switchTab('schema')">Schema.org</div>
     </div>
     <div class="toolbar">
@@ -226,6 +247,7 @@
       <div id="preview-content"  style="display:none"></div>
       <div id="markdown-content" style="display:none"></div>
       <div id="note-content"     style="display:none"></div>
+      <div id="images-content"   style="display:none"></div>
       <div id="schema-content"   style="display:none"></div>
     </div>
   </div>
@@ -243,7 +265,7 @@
 
   function switchTab(tab) {
     currentTab = tab;
-    ['preview','markdown','note','schema'].forEach(t => {
+    ['preview','markdown','note','images','schema'].forEach(t => {
       document.getElementById('tab-' + t).classList.toggle('active', t === tab);
       const el = document.getElementById(t + '-content');
       if (el) el.style.display = t === tab ? 'block' : 'none';
@@ -376,6 +398,7 @@
     document.getElementById('preview-content').innerHTML = '';
     document.getElementById('markdown-content').textContent = '';
     document.getElementById('note-content').innerHTML = '';
+    document.getElementById('images-content').innerHTML = '';
     document.getElementById('schema-content').textContent = '';
     document.getElementById('char-count').textContent = '生成中...';
 
@@ -387,7 +410,7 @@
     setStep('step-done', '');
 
     // タブ表示
-    ['preview','markdown','note','schema'].forEach(t => {
+    ['preview','markdown','note','images','schema'].forEach(t => {
       document.getElementById(t + '-content').style.display = t === currentTab ? 'block' : 'none';
     });
 
@@ -451,6 +474,9 @@
       setStep('step-done', 'done');
       document.getElementById('eeat-badges').style.display = 'flex';
 
+      // 画像生成を非同期で開始
+      generateImages(keyword, stripAnnotations(fullText));
+
     } catch(err) {
       document.getElementById('char-count').textContent = '—';
       alert('エラー: ' + err.message);
@@ -472,6 +498,81 @@
     btn.textContent = '✅ コピーしました';
     btn.classList.add('copied');
     setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  }
+
+  async function generateImages(keyword, articleBody) {
+    const imgEl = document.getElementById('images-content');
+    imgEl.innerHTML = `<div class="img-generating"><div class="spin">⚙️</div><p style="margin-top:.75rem">画像を生成中...（15〜30秒かかります）</p></div>`;
+
+    try {
+      const res = await fetch('/api/images', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword, article_body: articleBody }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        if (err.detail && err.detail.includes('REPLICATE_API_TOKEN')) {
+          imgEl.innerHTML = `<div class="no-replicate">
+            <strong>📷 画像生成を有効にするには</strong><br><br>
+            Railwayの <code>Variables</code> に以下を追加してください:<br><br>
+            <code>REPLICATE_API_TOKEN</code> = <code>r8_...</code><br><br>
+            取得先: <a href="https://replicate.com/account/api-tokens" target="_blank">replicate.com/account/api-tokens</a>（無料登録・1枚約$0.003）
+          </div>`;
+        } else {
+          imgEl.innerHTML = `<div class="no-replicate"><strong>エラー:</strong> ${err.detail}</div>`;
+        }
+        return;
+      }
+
+      const data = await res.json();
+      let html = '';
+
+      if (data.title) {
+        html += `<div class="suggested-title">
+          <div class="st-label">✏️ AIが提案するnoteタイトル</div>
+          <div class="st-value">${data.title}</div>
+        </div>`;
+      }
+
+      // ヘッダー画像
+      if (data.header?.url) {
+        html += `<div class="img-section-title">🖼️ ヘッダー画像（noteカバー用 16:9）</div>
+        <div class="img-card">
+          <img src="${data.header.url}" alt="header" loading="lazy" />
+          <div class="img-card-body">
+            <div class="img-card-meta"><strong>カバー画像</strong>noteの記事上部に設定してください</div>
+            <a class="btn-dl" href="${data.header.url}" download target="_blank">⬇️ 保存</a>
+          </div>
+        </div>`;
+      }
+
+      // 記事内画像
+      if (data.images?.length > 0) {
+        html += `<div class="img-section-title">📸 記事内画像</div><div class="img-grid">`;
+        data.images.forEach(img => {
+          if (img.url) {
+            html += `<div class="img-card">
+              <img src="${img.url}" alt="${img.section}" loading="lazy" />
+              <div class="img-card-body">
+                <div class="img-card-meta"><strong>${img.section}</strong>セクションの挿入に</div>
+                <a class="btn-dl" href="${img.url}" download target="_blank">⬇️ 保存</a>
+              </div>
+            </div>`;
+          }
+        });
+        html += `</div>`;
+      }
+
+      imgEl.innerHTML = html;
+
+      // 画像タブのバッジ更新
+      document.getElementById('tab-images').textContent = `画像 (${1 + (data.images?.length || 0)}枚)`;
+
+    } catch(e) {
+      imgEl.innerHTML = `<div class="no-replicate"><strong>エラー:</strong> ${e.message}</div>`;
+    }
   }
 
   document.getElementById('keyword').addEventListener('keydown', e => { if (e.key === 'Enter') generate(); });
