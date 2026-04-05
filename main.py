@@ -1,15 +1,13 @@
 """
 SEO Article Generator - Web App (Enhanced)
-競合分析 + E-E-A-T + FAQ + Schema.org 対応
+競合分析 + E-E-A-T + FAQ + Schema.org + 無料画像検索
 """
 
-import asyncio
 import json
 import os
 from pathlib import Path
 
 import anthropic
-import replicate
 from duckduckgo_search import DDGS
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -30,34 +28,10 @@ class GenerateRequest(BaseModel):
 
 class ImageRequest(BaseModel):
     keyword: str
-    article_body: str  # META/SCHEMA除去済みのMarkdown本文
-
-
-async def gen_image(prompt: str, aspect_ratio: str = "16:9") -> str:
-    """Replicate Flux-schnell で画像を1枚生成してURLを返す"""
-    loop = asyncio.get_event_loop()
-    try:
-        output = await loop.run_in_executor(
-            None,
-            lambda: replicate.run(
-                "black-forest-labs/flux-schnell",
-                input={
-                    "prompt": prompt,
-                    "aspect_ratio": aspect_ratio,
-                    "output_format": "webp",
-                    "num_outputs": 1,
-                    "num_inference_steps": 4,
-                    "go_fast": True,
-                },
-            ),
-        )
-        return str(list(output)[0])
-    except Exception:
-        return ""
+    article_body: str
 
 
 def search_competitors(keyword: str, num: int = 5) -> list[dict]:
-    """DuckDuckGoで上位表示中の競合サイトを取得"""
     results = []
     try:
         with DDGS() as ddgs:
@@ -70,6 +44,30 @@ def search_competitors(keyword: str, num: int = 5) -> list[dict]:
     except Exception:
         pass
     return results
+
+
+def search_images(query: str, count: int = 1, wide: bool = True) -> list[str]:
+    """DuckDuckGoでCC画像を検索してURLリストを返す"""
+    urls = []
+    try:
+        with DDGS() as ddgs:
+            results = ddgs.images(
+                query,
+                license_image="shareCommercially",
+                max_results=count * 5,
+            )
+            for r in results:
+                w = r.get("width", 0)
+                h = r.get("height", 1)
+                if wide and w > h:
+                    urls.append(r["image"])
+                elif not wide:
+                    urls.append(r["image"])
+                if len(urls) >= count:
+                    break
+    except Exception:
+        pass
+    return urls
 
 
 def build_competitor_summary(competitors: list[dict]) -> str:
@@ -103,13 +101,10 @@ async def generate(req: GenerateRequest):
     client = anthropic.Anthropic(api_key=api_key)
 
     def stream():
-        # Phase 1: 競合分析
         yield f"data: {json.dumps({'phase': 'searching', 'message': '競合サイトを調査中...'}, ensure_ascii=False)}\n\n"
         competitors = search_competitors(req.keyword)
         competitor_summary = build_competitor_summary(competitors)
         yield f"data: {json.dumps({'phase': 'competitors', 'data': competitors}, ensure_ascii=False)}\n\n"
-
-        # Phase 2: 記事生成
         yield f"data: {json.dumps({'phase': 'writing', 'message': 'AI が記事を執筆中...'}, ensure_ascii=False)}\n\n"
 
         prompt = f"""あなたはSEOの専門家兼Webライターです。
@@ -231,22 +226,16 @@ keywords: （関連キーワード6〜10個・カンマ区切り）
 
 @app.post("/api/images")
 async def generate_images(req: ImageRequest):
-    replicate_token = os.environ.get("REPLICATE_API_TOKEN")
-    if not replicate_token:
-        raise HTTPException(status_code=400, detail="REPLICATE_API_TOKEN が未設定です")
-    os.environ["REPLICATE_API_TOKEN"] = replicate_token
-
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     client = anthropic.Anthropic(api_key=api_key)
 
-    # Claude（高速モデル）で画像プロンプトを生成
+    # Claudeで画像検索クエリとタイトルを生成
     resp = client.messages.create(
         model="claude-haiku-4-5-20251001",
         max_tokens=1024,
-        messages=[
-            {
-                "role": "user",
-                "content": f"""以下のnote記事に最適な画像プロンプトをEnglishで生成してください。
+        messages=[{
+            "role": "user",
+            "content": f"""以下のnote記事に最適な画像検索クエリを生成してください。
 
 記事キーワード: {req.keyword}
 記事本文（先頭600文字）:
@@ -255,35 +244,37 @@ async def generate_images(req: ImageRequest):
 以下のJSON形式のみ出力してください（前置き不要）:
 {{
   "title": "（この記事の最適なnoteタイトル・30文字以内・クリックしたくなる）",
-  "header": "（noteカバー画像用プロンプト・16:9・記事テーマを象徴するシーン）",
+  "header_query": "（ヘッダー画像の英語検索クエリ・記事テーマに合う横長写真）",
   "images": [
-    {{"section": "（どのセクション向けか・日本語）", "prompt": "（画像プロンプト・英語）"}},
-    {{"section": "（どのセクション向けか・日本語）", "prompt": "（画像プロンプト・英語）"}},
-    {{"section": "（どのセクション向けか・日本語）", "prompt": "（画像プロンプト・英語）"}}
+    {{"section": "（どのセクション向けか・日本語）", "query": "（英語検索クエリ）"}},
+    {{"section": "（どのセクション向けか・日本語）", "query": "（英語検索クエリ）"}},
+    {{"section": "（どのセクション向けか・日本語）", "query": "（英語検索クエリ）"}}
   ]
-}}
-
-全プロンプトに必ず含めること: flat design illustration, clean, professional, japanese blog aesthetic, soft pastel colors, no text, no letters, no words""",
-            }
-        ],
+}}""",
+        }],
     )
 
     try:
-        prompts = json.loads(resp.content[0].text)
+        data = json.loads(resp.content[0].text)
     except Exception:
-        raise HTTPException(status_code=500, detail="プロンプト生成に失敗しました")
+        raise HTTPException(status_code=500, detail="クエリ生成に失敗しました")
 
-    # ヘッダー + 記事内画像を並列生成
-    header_task = gen_image(prompts["header"], "16:9")
-    article_tasks = [gen_image(img["prompt"], "4:3") for img in prompts.get("images", [])]
-    all_urls = await asyncio.gather(header_task, *article_tasks)
+    # DuckDuckGoで画像検索（無料・APIキー不要）
+    header_urls = search_images(data["header_query"], count=1, wide=True)
+    images = []
+    for img in data.get("images", []):
+        urls = search_images(img["query"], count=1, wide=False)
+        images.append({
+            "section": img["section"],
+            "query": img["query"],
+            "url": urls[0] if urls else "",
+        })
 
     return {
-        "title": prompts.get("title", ""),
-        "header": {"url": all_urls[0], "prompt": prompts["header"]},
-        "images": [
-            {"url": all_urls[i + 1], "section": img["section"], "prompt": img["prompt"]}
-            for i, img in enumerate(prompts.get("images", []))
-            if i + 1 < len(all_urls)
-        ],
+        "title": data.get("title", ""),
+        "header": {
+            "url": header_urls[0] if header_urls else "",
+            "query": data["header_query"],
+        },
+        "images": [img for img in images if img["url"]],
     }

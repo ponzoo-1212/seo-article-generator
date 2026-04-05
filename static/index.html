@@ -513,16 +513,7 @@
 
       if (!res.ok) {
         const err = await res.json();
-        if (err.detail && err.detail.includes('REPLICATE_API_TOKEN')) {
-          imgEl.innerHTML = `<div class="no-replicate">
-            <strong>📷 画像生成を有効にするには</strong><br><br>
-            Railwayの <code>Variables</code> に以下を追加してください:<br><br>
-            <code>REPLICATE_API_TOKEN</code> = <code>r8_...</code><br><br>
-            取得先: <a href="https://replicate.com/account/api-tokens" target="_blank">replicate.com/account/api-tokens</a>（無料登録・1枚約$0.003）
-          </div>`;
-        } else {
-          imgEl.innerHTML = `<div class="no-replicate"><strong>エラー:</strong> ${err.detail}</div>`;
-        }
+        imgEl.innerHTML = `<div class="no-replicate"><strong>エラー:</strong> ${err.detail}</div>`;
         return;
       }
 
@@ -538,12 +529,12 @@
 
       // ヘッダー画像
       if (data.header?.url) {
-        html += `<div class="img-section-title">🖼️ ヘッダー画像（noteカバー用 16:9）</div>
+        html += `<div class="img-section-title">🖼️ ヘッダー画像（noteカバー用）</div>
         <div class="img-card">
           <img src="${data.header.url}" alt="header" loading="lazy" />
           <div class="img-card-body">
             <div class="img-card-meta"><strong>カバー画像</strong>noteの記事上部に設定してください</div>
-            <a class="btn-dl" href="${data.header.url}" download target="_blank">⬇️ 保存</a>
+            <a class="btn-dl" href="${data.header.url}" target="_blank">🔗 画像を開く</a>
           </div>
         </div>`;
       }
@@ -557,7 +548,7 @@
               <img src="${img.url}" alt="${img.section}" loading="lazy" />
               <div class="img-card-body">
                 <div class="img-card-meta"><strong>${img.section}</strong>セクションの挿入に</div>
-                <a class="btn-dl" href="${img.url}" download target="_blank">⬇️ 保存</a>
+                <a class="btn-dl" href="${img.url}" target="_blank">🔗 画像を開く</a>
               </div>
             </div>`;
           }
