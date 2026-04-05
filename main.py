@@ -1,6 +1,6 @@
 """
-SEO Article Generator - Web App
-FastAPI + Anthropic Streaming
+SEO Article Generator - Web App (Enhanced)
+競合分析 + E-E-A-T + FAQ + Schema.org 対応
 """
 
 import json
@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 
 import anthropic
+from duckduckgo_search import DDGS
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -16,20 +17,45 @@ from pydantic import BaseModel
 load_dotenv()
 
 app = FastAPI(title="SEO Article Generator")
-
 STATIC_DIR = Path(__file__).parent / "static"
 
 
 class GenerateRequest(BaseModel):
     keyword: str
     length: int = 2000
-    tone: str = "professional"  # professional / casual / academic
+    tone: str = "professional"
+
+
+def search_competitors(keyword: str, num: int = 5) -> list[dict]:
+    """DuckDuckGoで上位表示中の競合サイトを取得"""
+    results = []
+    try:
+        with DDGS() as ddgs:
+            for r in ddgs.text(keyword, max_results=num):
+                results.append({
+                    "title": r.get("title", ""),
+                    "url": r.get("href", ""),
+                    "description": r.get("body", ""),
+                })
+    except Exception:
+        pass
+    return results
+
+
+def build_competitor_summary(competitors: list[dict]) -> str:
+    if not competitors:
+        return "競合データなし"
+    lines = []
+    for i, c in enumerate(competitors, 1):
+        lines.append(f"{i}. 【{c['title']}】")
+        lines.append(f"   URL: {c['url']}")
+        lines.append(f"   概要: {c['description'][:120]}...")
+    return "\n".join(lines)
 
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
-    html_path = STATIC_DIR / "index.html"
-    return HTMLResponse(html_path.read_text(encoding="utf-8"))
+    return HTMLResponse((STATIC_DIR / "index.html").read_text(encoding="utf-8"))
 
 
 @app.post("/api/generate")
@@ -44,60 +70,120 @@ async def generate(req: GenerateRequest):
         "academic": "権威ある学術的な文体",
     }
     tone_desc = tone_map.get(req.tone, tone_map["professional"])
+    client = anthropic.Anthropic(api_key=api_key)
 
-    prompt = f"""あなたはSEOの専門家兼Webライターです。
-以下の条件でSEO上位表示を狙ったMarkdown形式の記事を執筆してください。
+    def stream():
+        # Phase 1: 競合分析
+        yield f"data: {json.dumps({'phase': 'searching', 'message': '競合サイトを調査中...'}, ensure_ascii=False)}\n\n"
+        competitors = search_competitors(req.keyword)
+        competitor_summary = build_competitor_summary(competitors)
+        yield f"data: {json.dumps({'phase': 'competitors', 'data': competitors}, ensure_ascii=False)}\n\n"
 
-## 条件
+        # Phase 2: 記事生成
+        yield f"data: {json.dumps({'phase': 'writing', 'message': 'AI が記事を執筆中...'}, ensure_ascii=False)}\n\n"
+
+        prompt = f"""あなたはSEOの専門家兼Webライターです。
+Googleのアルゴリズムに最大限対応し、検索上位表示を狙った記事を執筆してください。
+
+## 基本条件
 - メインキーワード: {req.keyword}
 - 目標文字数: {req.length}文字
 - 文体: {tone_desc}
 
-## SEO要件（必ず守ること）
-1. H1タイトルにメインキーワードを含める（35文字前後）
-2. 冒頭100文字以内にメインキーワードを自然に入れる
-3. H2見出しを5〜7個設ける
-4. 各H2にH3を2〜3個ずつ付ける
-5. LSIキーワード・共起語を本文に自然に散りばめる
-6. 結論セクションでCTA（行動喚起）を入れる
-7. 読者の悩みに寄り添い、解決策を具体的に示す
+## 競合サイト分析（上位{len(competitors)}件）
+{competitor_summary}
 
-## 出力形式
-以下の順序でMarkdownを出力してください:
+競合を上回るために:
+- 競合が触れていない角度・情報を盛り込む
+- より具体的・網羅的な内容にする
+- 独自の視点・体験談・事例を追加する
 
-1. まず冒頭に以下のメタ情報をコメントとして記述:
+## Google アルゴリズム対応要件
+
+### E-E-A-T（必須）
+- **Experience（経験）**: 実体験・具体的なエピソードを含める
+- **Expertise（専門性）**: 専門用語を正確に使い、数字・データで裏付ける
+- **Authoritativeness（権威性）**: 信頼できる情報源・統計データを引用
+- **Trustworthiness（信頼性）**: 正確な情報、根拠明示、デメリットも公平に記載
+
+### Helpful Content Update 対応
+- 検索者の悩みを完全に解決する「一次情報」を提供
+- AI生成っぽい表現を避け、人間味のある文章にする
+- 「なぜ」「どうやって」「いくら」など具体的な疑問に答える
+- 読後に「この記事を読んでよかった」と思える付加価値を入れる
+
+### 構造化・セマンティックSEO
+- H1にメインキーワードを含める（35文字前後）
+- H2見出しに検索される疑問形フレーズを使う（例:「〜とは？」「〜の方法」）
+- LSIキーワード・共起語を自然に本文へ散りばめる
+- FAQ セクションを必ず末尾近くに設ける（Googleの注目スニペット対策）
+
+## 出力形式（この順序で出力すること）
+
+### ① メタ情報（コメントブロック）
 <!-- META
-title: (H1タイトル)
-description: (メタディスクリプション120文字以内)
-keywords: (関連キーワード5〜8個、カンマ区切り)
+title: （H1タイトル・メインキーワード含む35文字前後）
+description: （メタディスクリプション・120文字以内・クリックしたくなる文章）
+keywords: （関連キーワード6〜10個・カンマ区切り）
 -->
 
-2. 記事本文（Markdown形式）
+### ② Schema.org JSON-LD（コメントブロック）
+<!-- SCHEMA
+{{
+  "@context": "https://schema.org",
+  "@graph": [
+    {{
+      "@type": "Article",
+      "headline": "（タイトル）",
+      "description": "（ディスクリプション）",
+      "keywords": "（キーワード）"
+    }},
+    {{
+      "@type": "FAQPage",
+      "mainEntity": [
+        {{
+          "@type": "Question",
+          "name": "（よくある質問1）",
+          "acceptedAnswer": {{"@type": "Answer", "text": "（回答1）"}}
+        }},
+        {{
+          "@type": "Question",
+          "name": "（よくある質問2）",
+          "acceptedAnswer": {{"@type": "Answer", "text": "（回答2）"}}
+        }},
+        {{
+          "@type": "Question",
+          "name": "（よくある質問3）",
+          "acceptedAnswer": {{"@type": "Answer", "text": "（回答3）"}}
+        }}
+      ]
+    }}
+  ]
+}}
+-->
 
-記事本文のみ出力してください。前置き・説明・コメントは不要です。"""
+### ③ 記事本文（Markdown）
+- 上記メタ・スキーマの後に本文を書く
+- 必ずFAQセクション（## よくある質問）を含める
+- 結論・まとめにCTA（行動喚起）を入れる
+- 前置き・説明は不要。記事本文のみ出力"""
 
-    client = anthropic.Anthropic(api_key=api_key)
-
-    def stream():
         try:
             with client.messages.stream(
                 model="claude-opus-4-6",
-                max_tokens=5000,
+                max_tokens=6000,
                 messages=[{"role": "user", "content": prompt}],
-            ) as stream:
-                for text in stream.text_stream:
-                    yield f"data: {json.dumps({'text': text}, ensure_ascii=False)}\n\n"
+            ) as s:
+                for text in s.text_stream:
+                    yield f"data: {json.dumps({'phase': 'text', 'text': text}, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
         except anthropic.AuthenticationError:
-            yield f"data: {json.dumps({'error': 'APIキーが無効です。.envファイルを確認してください。'})}\n\n"
+            yield f"data: {json.dumps({'error': 'APIキーが無効です'})}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
     return StreamingResponse(
         stream(),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-        },
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

@@ -17,219 +17,106 @@
       --text: #1e293b;
       --text-muted: #64748b;
       --success: #10b981;
+      --warning: #f59e0b;
       --radius: 12px;
       --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
     }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 1rem 2rem;
-      display: flex;
-      align-items: center;
-      gap: .75rem;
-    }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; gap: .75rem; }
     header .logo { font-size: 1.5rem; }
     header h1 { font-size: 1.1rem; font-weight: 700; }
     header p  { font-size: .8rem; color: var(--text-muted); }
 
-    .container {
-      max-width: 1100px;
-      margin: 2rem auto;
-      padding: 0 1.5rem;
-      display: grid;
-      grid-template-columns: 340px 1fr;
-      gap: 1.5rem;
-      align-items: start;
-    }
+    .container { max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; display: grid; grid-template-columns: 320px 1fr; gap: 1.5rem; align-items: start; }
 
-    /* ── 左パネル ── */
-    .panel {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.5rem;
-      box-shadow: var(--shadow);
-      position: sticky;
-      top: 1.5rem;
-    }
-    .panel h2 { font-size: .9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 1.25rem; }
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); position: sticky; top: 1.5rem; }
+    .panel-title { font-size: .8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 1.25rem; }
 
     label { display: block; font-size: .875rem; font-weight: 600; margin-bottom: .4rem; }
-    input[type="text"], select {
-      width: 100%;
-      padding: .625rem .875rem;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: .9rem;
-      color: var(--text);
-      background: var(--surface);
-      transition: border-color .15s;
-      outline: none;
-    }
+    input[type="text"], select { width: 100%; padding: .625rem .875rem; border: 1px solid var(--border); border-radius: 8px; font-size: .9rem; color: var(--text); background: var(--surface); transition: border-color .15s; outline: none; }
     input[type="text"]:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,.12); }
 
     .field { margin-bottom: 1.25rem; }
-    .hint  { font-size: .775rem; color: var(--text-muted); margin-top: .3rem; }
+    .hint { font-size: .775rem; color: var(--text-muted); margin-top: .3rem; }
 
-    .length-row {
-      display: flex;
-      align-items: center;
-      gap: .75rem;
-    }
+    .length-row { display: flex; align-items: center; gap: .75rem; }
     input[type="range"] { flex: 1; accent-color: var(--primary); }
-    .length-val { font-size: .875rem; font-weight: 700; color: var(--primary); min-width: 3rem; text-align: right; }
+    .length-val { font-size: .875rem; font-weight: 700; color: var(--primary); min-width: 3.5rem; text-align: right; }
 
-    .btn-generate {
-      width: 100%;
-      padding: .75rem;
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-size: .95rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background .15s, opacity .15s;
-      margin-top: .5rem;
-    }
+    .btn-generate { width: 100%; padding: .75rem; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: .95rem; font-weight: 700; cursor: pointer; transition: background .15s; margin-top: .5rem; }
     .btn-generate:hover:not(:disabled) { background: var(--primary-hover); }
-    .btn-generate:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-generate:disabled { opacity: .5; cursor: not-allowed; }
 
-    .status {
-      margin-top: .75rem;
-      font-size: .8rem;
-      color: var(--text-muted);
-      min-height: 1.2em;
-      display: flex;
-      align-items: center;
-      gap: .4rem;
-    }
-    .dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--primary);
-      animation: pulse 1s ease-in-out infinite;
-    }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    /* Progress steps */
+    .progress { margin-top: 1rem; display: none; }
+    .step { display: flex; align-items: center; gap: .6rem; padding: .4rem 0; font-size: .825rem; color: var(--text-muted); }
+    .step .icon { font-size: 1rem; width: 1.2rem; text-align: center; }
+    .step.active { color: var(--primary); font-weight: 600; }
+    .step.done { color: var(--success); }
 
-    /* ── 右パネル ── */
-    .output-panel {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
+    /* Competitor list */
+    .competitor-list { margin-top: 1rem; display: none; }
+    .competitor-title { font-size: .8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .6rem; }
+    .competitor-item { padding: .5rem .6rem; border: 1px solid var(--border); border-radius: 6px; margin-bottom: .4rem; font-size: .78rem; }
+    .competitor-item a { color: var(--primary); text-decoration: none; font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .competitor-item a:hover { text-decoration: underline; }
+    .competitor-item p { color: var(--text-muted); margin-top: .2rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-    .tabs {
-      display: flex;
-      border-bottom: 1px solid var(--border);
-      background: var(--bg);
-    }
-    .tab {
-      padding: .7rem 1.25rem;
-      font-size: .85rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: color .15s, border-color .15s;
-      user-select: none;
-    }
+    /* Output */
+    .output-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+
+    .tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--bg); }
+    .tab { padding: .7rem 1.1rem; font-size: .85rem; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; transition: color .15s, border-color .15s; user-select: none; }
     .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 
-    .toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: .6rem 1rem;
-      border-bottom: 1px solid var(--border);
-      background: var(--bg);
-    }
+    .toolbar { display: flex; align-items: center; justify-content: space-between; padding: .6rem 1rem; border-bottom: 1px solid var(--border); background: var(--bg); flex-wrap: wrap; gap: .5rem; }
     .char-count { font-size: .8rem; color: var(--text-muted); }
-    .btn-copy {
-      padding: .4rem .9rem;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--surface);
-      font-size: .8rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background .15s;
-      display: flex;
-      align-items: center;
-      gap: .35rem;
-    }
-    .btn-copy:hover { background: var(--bg); }
-    .btn-copy.copied { color: var(--success); border-color: var(--success); }
+    .toolbar-right { display: flex; gap: .5rem; }
+    .btn-sm { padding: .35rem .8rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); font-size: .78rem; font-weight: 600; cursor: pointer; transition: background .15s; }
+    .btn-sm:hover { background: var(--bg); }
+    .btn-sm.copied { color: var(--success); border-color: var(--success); }
 
     .output-body { padding: 1.5rem; min-height: 400px; }
 
-    /* Markdown preview */
-    #preview-content {
-      line-height: 1.75;
-      font-size: .95rem;
-    }
-    #preview-content h1 { font-size: 1.6rem; margin: 0 0 1rem; line-height: 1.3; }
-    #preview-content h2 { font-size: 1.2rem; margin: 2rem 0 .75rem; padding-bottom: .4rem; border-bottom: 2px solid var(--primary); }
-    #preview-content h3 { font-size: 1rem; margin: 1.25rem 0 .5rem; color: var(--primary); }
+    /* Preview */
+    #preview-content { line-height: 1.8; font-size: .95rem; }
+    #preview-content h1 { font-size: 1.55rem; margin: 0 0 1rem; line-height: 1.3; }
+    #preview-content h2 { font-size: 1.15rem; margin: 2rem 0 .75rem; padding-bottom: .4rem; border-bottom: 2px solid var(--primary); }
+    #preview-content h3 { font-size: 1rem; margin: 1.2rem 0 .5rem; color: var(--primary); }
     #preview-content p  { margin-bottom: 1rem; }
     #preview-content ul, #preview-content ol { margin: .75rem 0 1rem 1.5rem; }
     #preview-content li { margin-bottom: .35rem; }
     #preview-content table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .875rem; }
     #preview-content th { background: var(--bg); padding: .5rem .75rem; border: 1px solid var(--border); font-weight: 700; }
     #preview-content td { padding: .5rem .75rem; border: 1px solid var(--border); }
-    #preview-content code { background: var(--bg); padding: .15em .4em; border-radius: 4px; font-size: .875em; }
     #preview-content blockquote { border-left: 4px solid var(--primary); padding-left: 1rem; color: var(--text-muted); margin: 1rem 0; }
     #preview-content strong { font-weight: 700; }
 
     /* Markdown raw */
-    #markdown-content {
-      font-family: "SFMono-Regular", Consolas, monospace;
-      font-size: .85rem;
-      white-space: pre-wrap;
-      word-break: break-word;
-      color: var(--text);
-      line-height: 1.7;
-    }
+    #markdown-content { font-family: "SFMono-Regular", Consolas, monospace; font-size: .82rem; white-space: pre-wrap; word-break: break-word; line-height: 1.7; }
 
-    .placeholder {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 360px;
-      color: var(--text-muted);
-      gap: .75rem;
-    }
-    .placeholder .icon { font-size: 3rem; opacity: .4; }
-    .placeholder p { font-size: .9rem; }
+    /* Schema */
+    #schema-content { font-family: "SFMono-Regular", Consolas, monospace; font-size: .82rem; white-space: pre-wrap; word-break: break-word; line-height: 1.7; background: #0f172a; color: #e2e8f0; padding: 1rem; border-radius: 8px; }
 
     /* Meta box */
-    .meta-box {
-      background: #f0f9ff;
-      border: 1px solid #bae6fd;
-      border-radius: 8px;
-      padding: 1rem;
-      margin-bottom: 1.5rem;
-      font-size: .825rem;
-    }
-    .meta-box .meta-title { font-weight: 700; color: #0369a1; margin-bottom: .5rem; }
-    .meta-box .meta-row { margin-bottom: .25rem; color: var(--text-muted); }
+    .meta-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; font-size: .82rem; }
+    .meta-box .meta-title { font-weight: 700; color: #0369a1; margin-bottom: .5rem; display: flex; align-items: center; gap: .4rem; }
+    .meta-box .meta-row { margin-bottom: .3rem; }
     .meta-box .meta-row strong { color: var(--text); }
 
-    @media (max-width: 768px) {
-      .container { grid-template-columns: 1fr; }
-      .panel { position: static; }
-    }
+    /* EEAT badge */
+    .eeat-badges { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .badge { padding: .25rem .6rem; border-radius: 99px; font-size: .72rem; font-weight: 700; }
+    .badge-e { background: #dcfce7; color: #166534; }
+    .badge-a { background: #fef9c3; color: #854d0e; }
+    .badge-t { background: #ede9fe; color: #5b21b6; }
+
+    .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 360px; color: var(--text-muted); gap: .75rem; }
+    .placeholder .icon { font-size: 3rem; opacity: .4; }
+
+    @media (max-width: 768px) { .container { grid-template-columns: 1fr; } .panel { position: static; } }
   </style>
 </head>
 <body>
@@ -238,20 +125,20 @@
   <span class="logo">✍️</span>
   <div>
     <h1>SEO記事ジェネレーター</h1>
-    <p>キーワードを入力するだけでSEO最適化記事をAIが生成</p>
+    <p>競合分析 × E-E-A-T × Schema.org 対応 | Google上位表示を狙う</p>
   </div>
 </header>
 
 <div class="container">
 
-  <!-- 左パネル: 設定フォーム -->
+  <!-- 左パネル -->
   <div class="panel">
-    <h2>設定</h2>
+    <div class="panel-title">設定</div>
 
     <div class="field">
       <label for="keyword">メインキーワード</label>
       <input type="text" id="keyword" placeholder="例: 副業 始め方" />
-      <p class="hint">狙いたい検索キーワードを入力してください</p>
+      <p class="hint">狙いたい検索キーワードを入力</p>
     </div>
 
     <div class="field">
@@ -260,45 +147,65 @@
         <input type="range" id="length" min="1000" max="5000" step="500" value="2000" />
         <span class="length-val" id="length-label">2,000</span>
       </div>
-      <p class="hint">SEOには2,000〜3,000文字が目安です</p>
+      <p class="hint">SEOには2,000〜3,000文字が目安</p>
     </div>
 
     <div class="field">
       <label for="tone">文体</label>
       <select id="tone">
-        <option value="professional">プロフェッショナル（丁寧・信頼感）</option>
-        <option value="casual">カジュアル（親しみやすい）</option>
-        <option value="academic">アカデミック（権威ある）</option>
+        <option value="professional">プロフェッショナル</option>
+        <option value="casual">カジュアル</option>
+        <option value="academic">アカデミック</option>
       </select>
     </div>
 
-    <button class="btn-generate" id="btn-generate" onclick="generate()">
-      記事を生成する
-    </button>
+    <button class="btn-generate" id="btn-generate" onclick="generate()">記事を生成する</button>
 
-    <div class="status" id="status"></div>
+    <!-- 進捗ステップ -->
+    <div class="progress" id="progress">
+      <div class="step" id="step-search"><span class="icon">🔍</span> 競合サイトを調査中</div>
+      <div class="step" id="step-write"><span class="icon">✍️</span> AI が執筆中</div>
+      <div class="step" id="step-done"><span class="icon">✅</span> 生成完了</div>
+    </div>
+
+    <!-- 競合リスト -->
+    <div class="competitor-list" id="competitor-list">
+      <div class="competitor-title">競合サイト分析</div>
+      <div id="competitors"></div>
+    </div>
   </div>
 
-  <!-- 右パネル: 出力エリア -->
+  <!-- 右パネル -->
   <div class="output-panel">
     <div class="tabs">
-      <div class="tab active" id="tab-preview" onclick="switchTab('preview')">プレビュー</div>
-      <div class="tab" id="tab-markdown" onclick="switchTab('markdown')">Markdown</div>
+      <div class="tab active" id="tab-preview"  onclick="switchTab('preview')">プレビュー</div>
+      <div class="tab"        id="tab-markdown" onclick="switchTab('markdown')">Markdown</div>
+      <div class="tab"        id="tab-schema"   onclick="switchTab('schema')">Schema.org</div>
     </div>
     <div class="toolbar">
       <span class="char-count" id="char-count">0 文字</span>
-      <button class="btn-copy" id="btn-copy" onclick="copyMarkdown()">
-        📋 コピー
-      </button>
+      <div class="toolbar-right">
+        <button class="btn-sm" id="btn-copy-md" onclick="copyContent('markdown')">📋 Markdownコピー</button>
+        <button class="btn-sm" id="btn-copy-schema" onclick="copyContent('schema')">📋 Schemaコピー</button>
+      </div>
     </div>
     <div class="output-body">
       <div id="placeholder" class="placeholder">
         <div class="icon">📝</div>
         <p>キーワードを入力して「記事を生成する」を押してください</p>
       </div>
+      <div id="eeat-badges" class="eeat-badges" style="display:none">
+        <span class="badge badge-e">Experience</span>
+        <span class="badge badge-e">Expertise</span>
+        <span class="badge badge-a">Authoritativeness</span>
+        <span class="badge badge-t">Trustworthiness</span>
+        <span class="badge badge-t">FAQ対応</span>
+        <span class="badge badge-t">Schema.org</span>
+      </div>
       <div id="meta-display" style="display:none"></div>
-      <div id="preview-content" style="display:none"></div>
+      <div id="preview-content"  style="display:none"></div>
       <div id="markdown-content" style="display:none"></div>
+      <div id="schema-content"   style="display:none"></div>
     </div>
   </div>
 
@@ -306,79 +213,106 @@
 
 <script>
   let currentTab = 'preview';
-  let fullMarkdown = '';
+  let fullText = '';
+  let extractedSchema = '';
 
-  // 文字数スライダー
-  const lengthInput = document.getElementById('length');
-  const lengthLabel = document.getElementById('length-label');
-  lengthInput.addEventListener('input', () => {
-    lengthLabel.textContent = Number(lengthInput.value).toLocaleString();
+  document.getElementById('length').addEventListener('input', function() {
+    document.getElementById('length-label').textContent = Number(this.value).toLocaleString();
   });
 
   function switchTab(tab) {
     currentTab = tab;
-    document.getElementById('tab-preview').classList.toggle('active', tab === 'preview');
-    document.getElementById('tab-markdown').classList.toggle('active', tab === 'markdown');
-    document.getElementById('preview-content').style.display  = tab === 'preview'  ? 'block' : 'none';
-    document.getElementById('markdown-content').style.display = tab === 'markdown' ? 'block' : 'none';
+    ['preview','markdown','schema'].forEach(t => {
+      document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+      const el = document.getElementById(t + '-content');
+      if (el) el.style.display = t === tab ? 'block' : 'none';
+    });
   }
 
-  function setStatus(msg, loading = false) {
-    const el = document.getElementById('status');
-    el.innerHTML = loading
-      ? `<span class="dot"></span>${msg}`
-      : msg;
+  function setStep(id, state) {
+    const el = document.getElementById(id);
+    el.className = 'step ' + state;
+    if (state === 'active') el.querySelector('.icon').textContent = '⏳';
+    if (state === 'done')   el.querySelector('.icon').textContent = '✅';
   }
 
-  function extractMeta(markdown) {
-    const match = markdown.match(/<!--\s*META\s*([\s\S]*?)-->/);
-    if (!match) return null;
-    const raw = match[1];
-    const get = (key) => {
-      const m = raw.match(new RegExp(`${key}:\\s*(.+)`));
-      return m ? m[1].trim() : '';
-    };
-    return {
-      title: get('title'),
-      description: get('description'),
-      keywords: get('keywords'),
-    };
+  function extractMeta(text) {
+    const m = text.match(/<!--\s*META\s*([\s\S]*?)-->/);
+    if (!m) return null;
+    const get = k => { const r = m[1].match(new RegExp(k + ':\\s*(.+)')); return r ? r[1].trim() : ''; };
+    return { title: get('title'), description: get('description'), keywords: get('keywords') };
+  }
+
+  function extractSchema(text) {
+    const m = text.match(/<!--\s*SCHEMA\s*([\s\S]*?)-->/);
+    return m ? m[1].trim() : '';
+  }
+
+  function stripAnnotations(text) {
+    return text.replace(/<!--\s*META[\s\S]*?-->\s*/g, '')
+               .replace(/<!--\s*SCHEMA[\s\S]*?-->\s*/g, '').trim();
   }
 
   function renderMeta(meta) {
-    if (!meta || (!meta.title && !meta.description)) return '';
-    return `
-      <div class="meta-box">
-        <div class="meta-title">📊 SEOメタ情報</div>
-        ${meta.title       ? `<div class="meta-row"><strong>タイトル:</strong> ${meta.title}</div>` : ''}
-        ${meta.description ? `<div class="meta-row"><strong>ディスクリプション:</strong> ${meta.description}</div>` : ''}
-        ${meta.keywords    ? `<div class="meta-row"><strong>キーワード:</strong> ${meta.keywords}</div>` : ''}
-      </div>`;
+    if (!meta) return '';
+    return `<div class="meta-box">
+      <div class="meta-title">📊 SEOメタ情報</div>
+      ${meta.title       ? `<div class="meta-row"><strong>タイトル:</strong> ${meta.title}</div>` : ''}
+      ${meta.description ? `<div class="meta-row"><strong>ディスクリプション:</strong> ${meta.description}</div>` : ''}
+      ${meta.keywords    ? `<div class="meta-row"><strong>キーワード:</strong> ${meta.keywords}</div>` : ''}
+    </div>`;
   }
 
-  function stripMeta(markdown) {
-    return markdown.replace(/<!--\s*META[\s\S]*?-->\s*/g, '').trim();
+  function updateOutput() {
+    const meta = extractMeta(fullText);
+    extractedSchema = extractSchema(fullText);
+    const body = stripAnnotations(fullText);
+
+    document.getElementById('meta-display').innerHTML = renderMeta(meta);
+    document.getElementById('meta-display').style.display = meta ? 'block' : 'none';
+    document.getElementById('preview-content').innerHTML = marked.parse(body);
+    document.getElementById('markdown-content').textContent = body;
+    if (extractedSchema) {
+      try {
+        document.getElementById('schema-content').textContent = JSON.stringify(JSON.parse(extractedSchema), null, 2);
+      } catch {
+        document.getElementById('schema-content').textContent = extractedSchema;
+      }
+    }
+    const chars = body.replace(/\s/g, '').length;
+    document.getElementById('char-count').textContent = chars.toLocaleString() + ' 文字';
   }
 
   async function generate() {
     const keyword = document.getElementById('keyword').value.trim();
-    if (!keyword) {
-      alert('キーワードを入力してください');
-      return;
-    }
+    if (!keyword) { alert('キーワードを入力してください'); return; }
 
     const btn = document.getElementById('btn-generate');
     btn.disabled = true;
-    fullMarkdown = '';
+    fullText = '';
+    extractedSchema = '';
 
     document.getElementById('placeholder').style.display = 'none';
+    document.getElementById('eeat-badges').style.display = 'none';
     document.getElementById('meta-display').style.display = 'none';
-    document.getElementById('preview-content').style.display = currentTab === 'preview' ? 'block' : 'none';
-    document.getElementById('markdown-content').style.display = currentTab === 'markdown' ? 'block' : 'none';
+    document.getElementById('competitor-list').style.display = 'none';
+    document.getElementById('competitors').innerHTML = '';
     document.getElementById('preview-content').innerHTML = '';
     document.getElementById('markdown-content').textContent = '';
+    document.getElementById('schema-content').textContent = '';
     document.getElementById('char-count').textContent = '生成中...';
-    setStatus('AIが記事を生成しています...', true);
+
+    // 進捗表示
+    const progress = document.getElementById('progress');
+    progress.style.display = 'block';
+    setStep('step-search', 'active');
+    setStep('step-write', '');
+    setStep('step-done', '');
+
+    // タブ表示
+    ['preview','markdown','schema'].forEach(t => {
+      document.getElementById(t + '-content').style.display = t === currentTab ? 'block' : 'none';
+    });
 
     try {
       const res = await fetch('/api/generate', {
@@ -391,10 +325,7 @@
         }),
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || 'サーバーエラー');
-      }
+      if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'サーバーエラー'); }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -402,80 +333,68 @@
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-
+        const lines = decoder.decode(value).split('\n');
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
-          const data = line.slice(6);
-          if (data === '[DONE]') break;
-
+          const raw = line.slice(6);
+          if (raw === '[DONE]') break;
           try {
-            const parsed = JSON.parse(data);
-            if (parsed.error) throw new Error(parsed.error);
-            if (parsed.text) {
-              fullMarkdown += parsed.text;
+            const d = JSON.parse(raw);
+            if (d.error) throw new Error(d.error);
+
+            if (d.phase === 'searching') {
+              setStep('step-search', 'active');
+            }
+            if (d.phase === 'competitors') {
+              setStep('step-search', 'done');
+              setStep('step-write', 'active');
+              // 競合リスト表示
+              const list = document.getElementById('competitors');
+              if (d.data && d.data.length > 0) {
+                d.data.forEach((c, i) => {
+                  list.innerHTML += `<div class="competitor-item">
+                    <a href="${c.url}" target="_blank">${i+1}. ${c.title || c.url}</a>
+                    <p>${c.description}</p>
+                  </div>`;
+                });
+                document.getElementById('competitor-list').style.display = 'block';
+              }
+            }
+            if (d.phase === 'text' && d.text) {
+              fullText += d.text;
               updateOutput();
             }
-          } catch (e) {
+          } catch(e) {
             if (e.message !== 'Unexpected end of JSON input') throw e;
           }
         }
       }
 
-      const charCount = stripMeta(fullMarkdown).replace(/\s/g, '').length;
-      document.getElementById('char-count').textContent = `${charCount.toLocaleString()} 文字`;
-      setStatus('✅ 生成完了！');
-    } catch (err) {
-      setStatus(`❌ エラー: ${err.message}`);
+      setStep('step-write', 'done');
+      setStep('step-done', 'done');
+      document.getElementById('eeat-badges').style.display = 'flex';
+
+    } catch(err) {
       document.getElementById('char-count').textContent = '—';
+      alert('エラー: ' + err.message);
     } finally {
       btn.disabled = false;
     }
   }
 
-  function updateOutput() {
-    const meta = extractMeta(fullMarkdown);
-    const body = stripMeta(fullMarkdown);
-
-    // Meta box
-    const metaEl = document.getElementById('meta-display');
-    const metaHtml = renderMeta(meta);
-    if (metaHtml) {
-      metaEl.innerHTML = metaHtml;
-      metaEl.style.display = 'block';
-    }
-
-    // Preview
-    document.getElementById('preview-content').innerHTML = marked.parse(body);
-
-    // Markdown raw
-    document.getElementById('markdown-content').textContent = body;
-
-    // 文字数（リアルタイム）
-    const charCount = body.replace(/\s/g, '').length;
-    document.getElementById('char-count').textContent = `${charCount.toLocaleString()} 文字 (生成中...)`;
-  }
-
-  async function copyMarkdown() {
-    const body = stripMeta(fullMarkdown);
-    if (!body) return;
-    await navigator.clipboard.writeText(body);
-    const btn = document.getElementById('btn-copy');
+  async function copyContent(type) {
+    const body = stripAnnotations(fullText);
+    const content = type === 'schema' ? extractedSchema : body;
+    if (!content) return;
+    await navigator.clipboard.writeText(content);
+    const btn = document.getElementById('btn-copy-' + type);
+    const orig = btn.textContent;
     btn.textContent = '✅ コピーしました';
     btn.classList.add('copied');
-    setTimeout(() => {
-      btn.textContent = '📋 コピー';
-      btn.classList.remove('copied');
-    }, 2000);
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
   }
 
-  // Enter キーで生成
-  document.getElementById('keyword').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') generate();
-  });
+  document.getElementById('keyword').addEventListener('keydown', e => { if (e.key === 'Enter') generate(); });
 </script>
-
 </body>
 </html>
