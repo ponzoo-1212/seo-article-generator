@@ -255,9 +255,20 @@ async def generate_images(req: ImageRequest):
     )
 
     try:
-        data = json.loads(resp.content[0].text)
+        raw = resp.content[0].text
+        # コードブロックや前後のテキストを除去してJSONだけ抽出
+        raw = raw.strip()
+        if "```" in raw:
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        # { ... } の範囲だけ抜き出す
+        start = raw.find("{")
+        end = raw.rfind("}") + 1
+        raw = raw[start:end]
+        data = json.loads(raw)
     except Exception:
-        raise HTTPException(status_code=500, detail="クエリ生成に失敗しました")
+        raise HTTPException(status_code=500, detail=f"クエリ生成に失敗しました: {resp.content[0].text[:200]}")
 
     # DuckDuckGoで画像検索（無料・APIキー不要）
     header_urls = search_images(data["header_query"], count=1, wide=True)
