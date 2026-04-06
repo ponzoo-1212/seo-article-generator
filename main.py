@@ -222,13 +222,10 @@ keywords: （関連キーワード6〜10個・カンマ区切り）
 
 @app.post("/api/images")
 async def generate_images(req: ImageRequest):
-    if not os.environ.get("UNSPLASH_ACCESS_KEY"):
-        raise HTTPException(status_code=400, detail="UNSPLASH_ACCESS_KEY が未設定です")
-
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     client = anthropic.Anthropic(api_key=api_key)
 
-    # Claudeで検索クエリとタイトルを生成
+    # Claudeでタイトルと画像検索クエリを生成
     resp = client.messages.create(
         model="claude-haiku-4-5-20251001",
         max_tokens=1024,
@@ -253,7 +250,6 @@ async def generate_images(req: ImageRequest):
         }],
     )
 
-    # JSON抽出（コードブロック等を除去）
     try:
         raw = resp.content[0].text.strip()
         start = raw.find("{")
@@ -262,33 +258,24 @@ async def generate_images(req: ImageRequest):
     except Exception:
         raise HTTPException(status_code=500, detail="クエリ生成に失敗しました")
 
-    # Unsplashで画像検索
-    header_list = search_unsplash(data.get("header_query", req.keyword), "landscape", 1)
+    # Unsplash検索リンクを生成（APIキー不要）
+    def unsplash_link(query: str, orientation: str = "landscape") -> str:
+        q = urllib.parse.quote(query)
+        return f"https://unsplash.com/s/photos/{q}?orientation={orientation}"
+
     images = []
     for img in data.get("images", []):
-        results = search_unsplash(img["query"], "squarish", 1)
-        if results:
-            r = results[0]
-            images.append({
-                "section": img["section"],
-                "display": r["display"],
-                "full": r["full"],
-                "page": r["page"],
-                "author": r["author"],
-            })
-
-    header = {}
-    if header_list:
-        r = header_list[0]
-        header = {
-            "display": r["display"],
-            "full": r["full"],
-            "page": r["page"],
-            "author": r["author"],
-        }
+        images.append({
+            "section": img["section"],
+            "query": img["query"],
+            "link": unsplash_link(img["query"], "squarish"),
+        })
 
     return {
         "title": data.get("title", ""),
-        "header": header,
+        "header": {
+            "query": data.get("header_query", req.keyword),
+            "link": unsplash_link(data.get("header_query", req.keyword), "landscape"),
+        },
         "images": images,
     }

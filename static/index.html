@@ -153,6 +153,12 @@
     .btn-dl:hover { background: #eef2ff; }
     .no-replicate { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 1rem 1.25rem; font-size: .85rem; }
     .no-replicate strong { color: #c2410c; }
+    .img-link-card { border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: .75rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .img-link-label { font-size: .82rem; color: var(--text-muted); flex: 1; min-width: 200px; }
+    .img-link-label code { background: var(--bg); padding: .15em .4em; border-radius: 4px; color: var(--primary); font-size: .85em; }
+    .img-link-btn { display: inline-block; padding: .5rem 1.25rem; background: var(--primary); color: #fff; border-radius: 8px; font-size: .85rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
+    .img-link-btn:hover { background: var(--primary-hover); }
+    .img-link-hint { font-size: .75rem; color: var(--text-muted); width: 100%; margin-top: .25rem; }
 
     @media (max-width: 768px) { .container { grid-template-columns: 1fr; } .panel { position: static; } }
   </style>
@@ -528,35 +534,27 @@
       }
 
       // ヘッダー画像
-      if (data.header?.display) {
+      if (data.header?.link) {
         html += `<div class="img-section-title">🖼️ ヘッダー画像（noteカバー用）</div>
-        <div class="img-card">
-          <img src="${data.header.display}" alt="header" loading="lazy" />
-          <div class="img-card-body">
-            <div class="img-card-meta">
-              <strong>カバー画像</strong>
-              photo by <a href="${data.header.page}?utm_source=seo_tool&utm_medium=referral" target="_blank">${data.header.author}</a> on Unsplash
-            </div>
-            <a class="btn-dl" href="${data.header.full}" target="_blank">⬇️ 保存</a>
-          </div>
+        <div class="img-link-card">
+          <div class="img-link-label">検索クエリ: <code>${data.header.query}</code></div>
+          <a class="img-link-btn" href="${data.header.link}" target="_blank">
+            Unsplashで画像を選ぶ →
+          </a>
+          <div class="img-link-hint">クリックして好きな写真を選び、右クリック→「名前をつけて保存」</div>
         </div>`;
       }
 
       if (data.images?.length > 0) {
-        html += `<div class="img-section-title">📸 記事内画像</div><div class="img-grid">`;
+        html += `<div class="img-section-title">📸 記事内画像</div>`;
         data.images.forEach(img => {
-          html += `<div class="img-card">
-            <img src="${img.display}" alt="${img.section}" loading="lazy" />
-            <div class="img-card-body">
-              <div class="img-card-meta">
-                <strong>${img.section}</strong>
-                by <a href="${img.page}?utm_source=seo_tool&utm_medium=referral" target="_blank">${img.author}</a>
-              </div>
-              <a class="btn-dl" href="${img.full}" target="_blank">⬇️ 保存</a>
-            </div>
+          html += `<div class="img-link-card">
+            <div class="img-link-label"><strong>${img.section}</strong> ／ 検索クエリ: <code>${img.query}</code></div>
+            <a class="img-link-btn" href="${img.link}" target="_blank">
+              Unsplashで画像を選ぶ →
+            </a>
           </div>`;
         });
-        html += `</div>`;
       }
 
       imgEl.innerHTML = html;
